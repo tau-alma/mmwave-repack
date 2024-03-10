@@ -61,7 +61,7 @@ A quick overview of the currently supported CLI options are presented below.
 
 ```txt
 usage: repack.py [-h] [-v] [-ns NUMBER_SAMPLES] [-nc NUMBER_CHIRPS] [-o OUTPUT_DIR]
-                 [-i INPUT_DIR]
+                 [-i INPUT_DIR] [-st START_TIME]
 
 MMWAVECAS-RF-EVM board recordings post-processing routine. Repack the recordings into
 MIMO frames
@@ -77,6 +77,7 @@ options:
                         Output directory for storing the mimo frames
   -i INPUT_DIR, --input-dir INPUT_DIR
                         Input directory containing the recordings
+  -st START_TIME --start-time The start time of the recording session (format: YYYY-MM-DD HH:MM:SS)                      
 
 ```
 
@@ -101,7 +102,7 @@ the generated MIMO frames.
 2. Defining input and output directories
 
 ```bash
-python repack.py -i <path-to-recording-folder> -o <path-to-output-directory>
+python repack.py -i <path-to-recording-folder> -o <path-to-output-directory> -st <start-time of recording>
 ```
 
 If the output directory does not already exist, it will be created. Other options would
@@ -110,7 +111,7 @@ keep their default values and MIMO frames will be saved in the specified output 
 3. Defining the number of samples per chirp or chirp loops per frame
 
 ```bash
-python repack.py -ns <nb-samples-per-chrip> -nc <nb-chrip-loop> -i <path-to-recording-folder>
+python repack.py -ns <nb-samples-per-chrip> -nc <nb-chrip-loop> -i <path-to-recording-folder> -st <start-time of recording>
 ```
 
 

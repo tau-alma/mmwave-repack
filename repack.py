@@ -2,7 +2,10 @@
 
     @author: AMOUSSOU Z. Kenneth
     @date: 13-08-2022
+    Modified by Prashant Kumar Rai(@pkrason, prashant.rai@tuni.fi) to log correct timestamps for the recorded frames.
 """
+
+
 from typing import Optional
 from datetime import timedelta, datetime
 import os
@@ -10,12 +13,13 @@ import glob
 import argparse
 import sys
 import numpy as np
+import struct
 
 __VERSION__: str = "0.1"
 __COPYRIGHT__: str = "Copyright (C) 2022, RWU-RADAR Project"
 
 
-def getInfo(idx_file: str) -> tuple[int, int]:
+def getInfo(idx_file: str, start_time):
     """Get information about the recordings.
 
     The "*_idx.bin" files along the sample files gather usefule
@@ -96,15 +100,19 @@ def getInfo(idx_file: str) -> tuple[int, int]:
     ])
 
     data = np.fromfile(idx_file, dtype=dt, count=-1, offset=24)
-    timestamps = np.array([
-        (datetime.now() + timedelta(seconds=log[-2] * 1e-9)).timestamp()
-        for log in data
-    ])
+    timestamp_values = [log[-2] for log in data]
+    diff_time = np.diff(np.array(timestamp_values))
+    cumulative_times_microseconds = np.cumsum(diff_time)
 
-    return header[3], header[4], timestamps
+    calculated_timestamps = [datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S") + timedelta(microseconds=int(time)) for time in cumulative_times_microseconds]
+
+    # Now calculated_timestamps contains datetime objects for each frame
+    unix_timestamps = [timestamp.timestamp() for timestamp in calculated_timestamps]
+    return header[3], header[4], unix_timestamps
 
 
-def load(inputdir: str, device: str) -> Optional[dict[str, list[str]]]:
+
+def load(inputdir: str, device: str):
     """Load the recordings of the radar chip provided in argument.
 
     Arguments:
@@ -141,7 +149,7 @@ def toframe(
         mf: str, sf0: str, sf1: str, sf2: str,
         ns: int, nc: int, nf: int,
         output: str = ".",
-        start_idx: int = 0) -> int:
+        start_idx: int = 0):
     """Re-Format the raw radar ADC recording.
 
     The raw recording from each device is merge together to create
@@ -277,6 +285,12 @@ if __name__ == "__main__":
         type=str,
         default=None,
     )
+    parser.add_argument(
+        "-st", "--start-time",
+        help="start time of the recording",
+        type=str,
+        default=None,
+    )
 
     args = parser.parse_args()
 
@@ -296,10 +310,10 @@ if __name__ == "__main__":
         os.makedirs(args.output_dir, exist_ok=True)
 
     # Load devices recording file paths
-    master: dict[str, list[str]] = load(args.input_dir, "master")
-    slave1: dict[str, list[str]] = load(args.input_dir, "slave1")
-    slave2: dict[str, list[str]] = load(args.input_dir, "slave2")
-    slave3: dict[str, list[str]] = load(args.input_dir, "slave3")
+    master = load(args.input_dir, "master")
+    slave1 = load(args.input_dir, "slave1")
+    slave2 = load(args.input_dir, "slave2")
+    slave3 = load(args.input_dir, "slave3")
 
     assert master != None, "Error with master data files"
     assert slave1 != None, "Error with slave1 data files"
@@ -339,7 +353,8 @@ if __name__ == "__main__":
         sf2: str = slave2["data"][idx]
         sf3: str = slave3["data"][idx]
 
-        nf, _, timelogs = getInfo(mf_idx)
+        nf, _, timelogs = getInfo(mf_idx, args.start_time)
+        #print(getInfo(mf_idx))
 
         # Skip if the number of valid frame is 0
         if not nf:
